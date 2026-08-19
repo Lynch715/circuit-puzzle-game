@@ -1,0 +1,915 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>电路谜题 · 模拟电路游戏</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'PingFang SC','Microsoft YaHei',sans-serif;background:#12151c;color:#dde3ee;user-select:none;overflow:hidden}
+#app{display:flex;flex-direction:column;height:100vh;height:100dvh}
+#top{display:flex;align-items:center;gap:10px;padding:8px 14px;background:#1a1f2b;border-bottom:1px solid #2a3245;flex-wrap:wrap}
+#top h1{font-size:17px;color:#ffd166;margin-right:6px}
+.lvbtn{width:30px;height:30px;border-radius:6px;border:1px solid #3a4560;background:#232a3a;color:#8fa2c8;cursor:pointer;font-size:13px}
+.lvbtn:hover{background:#2e3a52}
+.lvbtn.cur{background:#ffd166;color:#12151c;border-color:#ffd166;font-weight:bold}
+.lvbtn.done{border-color:#4ade80;color:#4ade80}
+.lvbtn.lock{opacity:.35;cursor:not-allowed}
+#main{display:flex;flex:1;min-height:0}
+#side{width:210px;background:#1a1f2b;border-right:1px solid #2a3245;padding:10px;overflow-y:auto;display:flex;flex-direction:column;gap:8px}
+#side h3{font-size:12px;color:#7c8db0;margin:4px 0 2px}
+.pitem{display:flex;align-items:center;gap:8px;padding:6px 8px;background:#232a3a;border:1px solid #3a4560;border-radius:8px;cursor:pointer;font-size:13px}
+.pitem:hover{background:#2e3a52}
+.pitem.sel{border-color:#ffd166;background:#33301f}
+.pitem.out{opacity:.35;cursor:not-allowed}
+.pitem canvas{width:34px;height:22px}
+.pitem .cnt{margin-left:auto;font-size:11px;color:#7c8db0}
+#board{flex:1;position:relative;overflow:hidden}
+#cv{display:block;cursor:crosshair;touch-action:none;width:100%;max-width:784px;height:auto;margin:0 auto}
+#palette{display:flex;flex-direction:column;gap:6px}
+#right{width:250px;background:#1a1f2b;border-left:1px solid #2a3245;padding:12px;overflow-y:auto;font-size:13px;line-height:1.55}
+#right h2{font-size:15px;color:#ffd166;margin-bottom:6px}
+#desc{color:#aab6d0;margin-bottom:10px}
+#goals{display:flex;flex-direction:column;gap:6px;margin-bottom:10px}
+.goal{padding:6px 8px;border-radius:6px;background:#232a3a;border-left:3px solid #556;font-size:12px}
+.goal.ok{border-left-color:#4ade80;background:#1c2e24}
+.goal.ok::before{content:"✓ ";color:#4ade80}
+.goal:not(.ok)::before{content:"○ ";color:#7c8db0}
+#hintbox{background:#232a3a;border-radius:8px;padding:8px;font-size:12px;color:#8fa2c8;display:none}
+button.act{padding:7px 12px;border-radius:8px;border:1px solid #3a4560;background:#232a3a;color:#dde3ee;cursor:pointer;font-size:13px;margin:2px 4px 2px 0}
+button.act:hover{background:#2e3a52}
+#tip{position:absolute;pointer-events:none;background:#000c;border:1px solid #3a4560;border-radius:6px;padding:4px 8px;font-size:12px;display:none;z-index:5;white-space:pre}
+#win{position:absolute;inset:0;background:#000a;display:none;align-items:center;justify-content:center;z-index:10}
+#win .card{background:#1a1f2b;border:1px solid #ffd166;border-radius:14px;padding:30px 44px;text-align:center}
+#win h2{color:#ffd166;font-size:24px;margin-bottom:8px}
+#win p{color:#aab6d0;margin-bottom:16px;font-size:14px}
+#win button{padding:10px 22px;border-radius:8px;border:none;background:#ffd166;color:#12151c;font-weight:bold;font-size:15px;cursor:pointer}
+#msg{position:absolute;top:10px;left:50%;transform:translateX(-50%);background:#7f1d1d;border:1px solid #ef4444;color:#fecaca;padding:6px 14px;border-radius:8px;font-size:13px;display:none;z-index:6}
+.note{font-size:11px;color:#5c6b8a;margin-top:auto;padding-top:8px}
+#msg{max-width:92%;text-align:center}
+#win .card{max-width:86vw}
+/* ===== 平板 ===== */
+@media (max-width:1180px){
+  #side{width:180px}
+  #right{width:216px}
+  .pitem{font-size:12px}
+}
+/* ===== 手机 / 竖屏平板 ===== */
+@media (max-width:900px){
+  body{overflow:auto}
+  #app{height:auto;min-height:100dvh}
+  #main{flex-direction:column}
+  #board{flex:none}
+  #side{order:1;width:100%;flex-direction:row;align-items:stretch;overflow-x:auto;overflow-y:hidden;border-right:none;border-top:1px solid #2a3245;padding:8px;-webkit-overflow-scrolling:touch}
+  #side h3,.note{display:none}
+  #palette{flex-direction:row;gap:6px;flex:0 0 auto}
+  .pitem{flex-direction:column;justify-content:center;text-align:center;min-width:68px;max-width:78px;flex:0 0 auto;padding:5px 4px;font-size:11px;gap:3px;line-height:1.25}
+  .pitem span{white-space:normal;word-break:break-all}
+  .pitem .cnt{margin-left:0}
+  #toolDel{flex-direction:column;justify-content:center;min-width:56px;flex:0 0 auto;margin-left:6px;font-size:11px;text-align:center}
+  #right{order:2;width:100%;border-left:none;border-top:1px solid #2a3245;padding-bottom:28px}
+  #top{padding:6px 8px;gap:5px}
+  #top h1{font-size:14px;margin-right:2px}
+  #lvname{display:none}
+  .lvbtn{width:28px;height:28px;font-size:12px}
+  #win .card{padding:22px 26px}
+  #win h2{font-size:20px}
+  button.act{padding:9px 14px}
+}
+/* ===== 窄屏手机 ===== */
+@media (max-width:420px){
+  .lvbtn{width:25px;height:25px;font-size:11px;border-radius:5px}
+  #top h1{font-size:13px}
+}
+</style>
+</head>
+<body>
+<div id="app">
+<div id="top">
+  <h1>⚡ 电路谜题</h1>
+  <div id="lvbtns"></div>
+  <span id="lvname" style="font-size:13px;color:#8fa2c8;margin-left:8px"></span>
+</div>
+<div id="main">
+  <div id="side">
+    <h3>元件（点选后在板上拖放）</h3>
+    <div id="palette"></div>
+    <h3>工具</h3>
+    <div class="pitem" id="toolDel">🗑 删除元件</div>
+    <div class="note">· 拖动两个相邻圆点放置元件<br>· 拖动方向 = 正极→负极<br>· 点击开关/传感器可切换<br>· 右键也可删除<br>· 三极管需拖2格：C→B→E</div>
+  </div>
+  <div id="board">
+    <canvas id="cv"></canvas>
+    <div id="tip"></div>
+    <div id="msg"></div>
+    <div id="win"><div class="card"><h2>🎉 过关！</h2><p id="winp"></p><button id="nextbtn">下一关 →</button></div></div>
+  </div>
+  <div id="right">
+    <h2 id="rtitle"></h2>
+    <div id="desc"></div>
+    <h3 style="font-size:12px;color:#7c8db0;margin-bottom:5px">目标</h3>
+    <div id="goals"></div>
+    <button class="act" id="hintbtn">💡 提示</button>
+    <button class="act" id="resetbtn">↺ 重置本关</button>
+    <div id="hintbox"></div>
+    <h3 style="font-size:12px;color:#7c8db0;margin:10px 0 4px">知识点</h3>
+    <div id="know" style="font-size:12px;color:#8fa2c8"></div>
+  </div>
+</div>
+</div>
+<script>
+"use strict";
+// ============ 常量与元件定义 ============
+const S=68, OX=52, OY=46, COLS=11, ROWS=7; // 网格
+const TYPES={
+  w:   {n:'导线',        len:1},
+  b5:  {n:'电池 5V',     len:1, V:5,  Ri:1},
+  b9:  {n:'电池 9V',     len:1, V:9,  Ri:1},
+  r330:{n:'电阻 330Ω',   len:1, R:330},
+  r1k: {n:'电阻 1kΩ',    len:1, R:1000},
+  r10k:{n:'电阻 10kΩ',   len:1, R:10000},
+  bulb:{n:'灯泡 (100Ω)', len:1, R:100},
+  led: {n:'LED',         len:1, Vf:2.0, Ron:20},
+  cap: {n:'电容 2200µF', len:1, C:0.0022},
+  sw:  {n:'开关',        len:1},
+  d:   {n:'二极管',      len:1, Vf:0.6, Ron:10},
+  npn: {n:'NPN 三极管',  len:2},
+  ac:  {n:'交流源 ±5V',  len:1, V:5, Ri:1, F:1.2},
+  sens:{n:'触摸传感器',  len:1, V:5, Ri:100000},
+  probe:{n:'电压表',     len:1, R:1e6},
+};
+// ============ 全局状态 ============
+let comps=[];            // {t,ax,ay,bx,by,fixed,on,burned,i,v,vc,burnT}
+let level=0, unlocked=0, tool='w', stock={}, simT=0, phase=0;
+let latch={};            // 关卡时序判定用
+let winShown=false, editVersion=0;
+const cv=document.getElementById('cv'), ctx=cv.getContext('2d');
+function px(c){return OX+c*S} function py(r){return OY+r*S}
+function dotAt(mx,my){
+  const c=Math.round((mx-OX)/S), r=Math.round((my-OY)/S);
+  if(c<0||c>=COLS||r<0||r>=ROWS) return null;
+  if(Math.hypot(mx-px(c),my-py(r))>S*0.48) return null;
+  return [c,r];
+}
+function edgeKey(ax,ay,bx,by){return ax+','+ay+'|'+bx+','+by}
+function compEdges(c){ // 元件占用的单位边列表
+  const es=[]; const dx=Math.sign(c.bx-c.ax), dy=Math.sign(c.by-c.ay);
+  const n=Math.max(Math.abs(c.bx-c.ax),Math.abs(c.by-c.ay));
+  for(let k=0;k<n;k++){
+    const x1=c.ax+dx*k,y1=c.ay+dy*k,x2=c.ax+dx*(k+1),y2=c.ay+dy*(k+1);
+    es.push(x1<x2||y1<y2?edgeKey(x1,y1,x2,y2):edgeKey(x2,y2,x1,y1));
+  }
+  return es;
+}
+function occupied(){const s=new Set();for(const c of comps)for(const e of compEdges(c))s.add(e);return s}
+function midOf(c){return [(px(c.ax)+px(c.bx))/2,(py(c.ay)+py(c.by))/2]}
+function compAt(mx,my){
+  let best=null,bd=26;
+  for(const c of comps){const [x,y]=midOf(c);const d=Math.hypot(mx-x,my-y);if(d<bd){bd=d;best=c}}
+  return best;
+}
+function resetLatch(){latch={};winShown=false;editVersion++;}
+// ============ 放置与删除 ============
+let dragFrom=null, mouseXY=[0,0];
+function tryPlace(a,b){
+  const T=TYPES[tool]; if(!T) return;
+  const dx=b[0]-a[0], dy=b[1]-a[1];
+  if(dx!==0&&dy!==0) return showMsg('只能水平或垂直放置');
+  const len=Math.abs(dx)+Math.abs(dy);
+  if(len===0) return;
+  if(tool==='npn'){
+    if(len!==2) return showMsg('三极管需要拖 2 格（集电极→基极→发射极）');
+  } else if(tool==='w'){
+    // 导线允许多格，逐格放
+  } else if(len!==1) return showMsg('该元件只占 1 格');
+  const occ=occupied();
+  const mk=(ax,ay,bx,by,t)=>({t,ax,ay,bx,by,on:false,burned:false,i:0,v:0,vc:0,burnT:0});
+  if(tool==='w'){
+    const sx=Math.sign(dx),sy=Math.sign(dy);let placed=0;
+    for(let k=0;k<len;k++){
+      const c=mk(a[0]+sx*k,a[1]+sy*k,a[0]+sx*(k+1),a[1]+sy*(k+1),'w');
+      if(!compEdges(c).some(e=>occ.has(e))){comps.push(c);compEdges(c).forEach(e=>occ.add(e));placed++}
+    }
+    if(placed)resetLatch();
+    return;
+  }
+  if((stock[tool]|0)<=0) return showMsg('该元件已用完');
+  const c=mk(a[0],a[1],b[0],b[1],tool);
+  if(compEdges(c).some(e=>occ.has(e))) return showMsg('位置已被占用');
+  comps.push(c); stock[tool]--; renderPalette(); resetLatch();
+}
+function removeComp(c){
+  if(!c||c.fixed) return;
+  comps.splice(comps.indexOf(c),1);
+  if(c.t!=='w'&&stock[c.t]!==undefined){stock[c.t]++;renderPalette()}
+  resetLatch();
+}
+let msgTimer=null;
+function showMsg(s){
+  const m=document.getElementById('msg');m.textContent=s;m.style.display='block';
+  clearTimeout(msgTimer);msgTimer=setTimeout(()=>m.style.display='none',2200);
+}
+// ============ 输入 ============
+// 画布可能被 CSS 缩放（手机/平板），坐标需按比例映射回内部像素
+function evtXY(e){
+  const r=cv.getBoundingClientRect();
+  return [(e.clientX-r.left)*(cv.width/r.width),(e.clientY-r.top)*(cv.height/r.height)];
+}
+function showTip(c,clientX,clientY){
+  const tip=document.getElementById('tip');
+  const br=document.getElementById('board').getBoundingClientRect();
+  tip.style.display='block';
+  const nm=c.t==='sens'?(TYPES[c.t].n+(c.on?' (按下)':' (松开)')):TYPES[c.t].n;
+  tip.textContent=nm+'\n电压 '+fmtV(c.v)+'  电流 '+fmtI(c.i)+(c.burned?'\n💥 已烧毁':'');
+  let tx=clientX-br.left+14, ty=clientY-br.top+8;
+  tip.style.left='0px';tip.style.top='0px';
+  const tw=tip.offsetWidth,th=tip.offsetHeight;
+  if(tx+tw>br.width-4)tx=Math.max(4,clientX-br.left-tw-10);
+  if(ty+th>br.height-4)ty=Math.max(4,clientY-br.top-th-10);
+  tip.style.left=tx+'px';tip.style.top=ty+'px';
+}
+function hideTip(){document.getElementById('tip').style.display='none'}
+let tipTimer=null;
+cv.addEventListener('pointerdown',e=>{
+  e.preventDefault();
+  const [mx,my]=evtXY(e);
+  if(e.button===2||tool==='del'){removeComp(compAt(mx,my));return}
+  const d=dotAt(mx,my);
+  if(d){dragFrom=d;mouseXY=[mx,my];try{cv.setPointerCapture(e.pointerId)}catch(_){ }return}
+  const c=compAt(mx,my);
+  if(c&&(c.t==='sw'||c.t==='sens')){c.on=!c.on;editVersion++;}
+  else if(c&&c.t!=='w'&&e.pointerType!=='mouse'){
+    showTip(c,e.clientX,e.clientY);
+    clearTimeout(tipTimer);tipTimer=setTimeout(hideTip,1600);
+  }
+});
+cv.addEventListener('pointermove',e=>{
+  const [mx,my]=evtXY(e);mouseXY=[mx,my];
+  if(e.pointerType!=='mouse'||dragFrom){if(dragFrom)hideTip();return}
+  const c=compAt(mx,my);
+  if(c&&c.t!=='w')showTip(c,e.clientX,e.clientY);else hideTip();
+});
+cv.addEventListener('pointerup',e=>{
+  if(!dragFrom)return;
+  const [mx,my]=evtXY(e);
+  const d=dotAt(mx,my);
+  if(d&&(d[0]!==dragFrom[0]||d[1]!==dragFrom[1]))tryPlace(dragFrom,d);
+  dragFrom=null;
+});
+cv.addEventListener('pointercancel',()=>{dragFrom=null});
+cv.addEventListener('contextmenu',e=>e.preventDefault());
+cv.addEventListener('mouseleave',()=>{dragFrom=null;hideTip()});
+function fmtV(v){return Math.abs(v)>=1?v.toFixed(2)+'V':(v*1000).toFixed(0)+'mV'}
+function fmtI(i){const a=Math.abs(i);return a>=1?i.toFixed(2)+'A':a>=0.001?(i*1000).toFixed(1)+'mA':(i*1e6).toFixed(0)+'µA'}
+// ============ 仿真引擎：节点电压法 + 分段线性模型 ============
+// 所有电源用诺顿等效（电导+电流源），无需额外支路变量。
+const DT=0.004, SUBSTEPS=4, GMIN=1e-9;
+function key(x,y){return x+','+y}
+function simulate(){
+  for(let s=0;s<SUBSTEPS;s++) simStep(DT);
+  simT+=DT*SUBSTEPS;
+}
+function simStep(dt){
+  // 1. 并查集：导线合并节点
+  const parent={};
+  const find=k=>{let r=k;while(parent[r]!==undefined&&parent[r]!==r)r=parent[r];parent[k]=r;return r};
+  const uni=(a,b)=>{const ra=find(a),rb=find(b);if(ra!==rb)parent[ra]=rb};
+  const touch=k=>{if(parent[k]===undefined)parent[k]=k};
+  const terms=c=>{ // 元件端子列表 [[x,y],...]，npn: [C,B,E]
+    if(c.t==='npn'){const mx=(c.ax+c.bx)/2,my=(c.ay+c.by)/2;return [[c.ax,c.ay],[mx,my],[c.bx,c.by]]}
+    return [[c.ax,c.ay],[c.bx,c.by]];
+  };
+  for(const c of comps){
+    for(const t of terms(c)) touch(key(t[0],t[1]));
+    if(c.t==='w') uni(key(c.ax,c.ay),key(c.bx,c.by));
+  }
+  // 2. 选地：第一个电源的负端
+  let gnd=null;
+  for(const c of comps){if(c.t==='b5'||c.t==='b9'||c.t==='ac'||c.t==='sens'){gnd=find(key(c.bx,c.by));break}}
+  if(gnd===null){for(const c of comps){c.i=0;c.v=0}return}
+  // 3. 节点编号（地=-1）
+  const idx={}; let N=0;
+  for(const k in parent){const r=find(k);if(idx[r]===undefined)idx[r]=(r===gnd?-1:N++)}
+  const ni=(x,y)=>idx[find(key(x,y))];
+  if(N===0){for(const c of comps){c.i=0;c.v=0}return}
+  // 4. PWL 状态迭代
+  const els=comps.filter(c=>c.t!=='w');
+  for(const c of els){if(c._st===undefined)c._st=false;if(c._stB===undefined)c._stB=false}
+  let volt=null;
+  for(let iter=0;iter<25;iter++){
+    const A=Array.from({length:N},()=>new Float64Array(N)), Z=new Float64Array(N);
+    const stampG=(a,b,g)=>{
+      if(a>=0)A[a][a]+=g; if(b>=0)A[b][b]+=g;
+      if(a>=0&&b>=0){A[a][b]-=g;A[b][a]-=g}
+    };
+    const stampI=(a,b,J)=>{if(a>=0)Z[a]+=J;if(b>=0)Z[b]-=J}; // J 从 b 流向 a（注入a）
+    for(let n=0;n<N;n++)A[n][n]+=GMIN;
+    for(const c of els){
+      const T=TYPES[c.t];
+      const a=ni(c.ax,c.ay), b=ni(c.bx,c.by);
+      switch(c.t){
+        case 'r330':case 'r1k':case 'r10k':case 'bulb':case 'probe':
+          stampG(a,b,1/T.R);break;
+        case 'b5':case 'b9':{const g=1/T.Ri;stampG(a,b,g);stampI(a,b,T.V*g);break}
+        case 'ac':{const g=1/T.Ri;const v=T.V*Math.sin(2*Math.PI*T.F*simT);stampG(a,b,g);stampI(a,b,v*g);break}
+        case 'sens':{const g=1/T.Ri;stampG(a,b,g);if(c.on)stampI(a,b,T.V*g);break}
+        case 'sw':stampG(a,b,c.on?20:GMIN);break;
+        case 'cap':{const g=T.C/dt;stampG(a,b,g);stampI(a,b,g*c.vc);break}
+        case 'led':case 'd':{
+          if(c.burned){stampG(a,b,GMIN);break}
+          if(c._st){const g=1/T.Ron;stampG(a,b,g);stampI(a,b,T.Vf*g)}
+          else stampG(a,b,GMIN);
+          break;
+        }
+        case 'npn':{
+          const m=ni((c.ax+c.bx)/2,(c.ay+c.by)/2);
+          // B-E 结（m→b）
+          if(c._stB){const g=1/200;stampG(m,b,g);stampI(m,b,0.65*g)}
+          else stampG(m,b,GMIN);
+          // C-E 沟道（a→b）
+          stampG(a,b,c._st?1/20:GMIN);
+          break;
+        }
+      }
+    }
+    volt=gauss(A,Z,N);
+    // 更新 PWL 状态
+    const V=n=>n<0?0:volt[n];
+    let changed=false;
+    for(const c of els){
+      const T=TYPES[c.t];
+      const a=ni(c.ax,c.ay), b=ni(c.bx,c.by);
+      if(c.t==='led'||c.t==='d'){
+        if(c.burned)continue;
+        const vd=V(a)-V(b);
+        let want=c._st?((vd-T.Vf)/T.Ron>0):(vd>T.Vf);
+        if(iter>15)want=c._st;
+        if(want!==c._st){c._st=want;changed=true}
+      } else if(c.t==='npn'){
+        const m=ni((c.ax+c.bx)/2,(c.ay+c.by)/2);
+        const vbe=V(m)-V(b);
+        let wantB=c._stB?((vbe-0.65)/200>0):(vbe>0.65);
+        const ib=wantB?Math.max(0,(vbe-0.65)/200):0;
+        let want=ib>3e-5; // 基极电流阈值 30µA
+        if(iter>15){wantB=c._stB;want=c._st}
+        if(wantB!==c._stB||want!==c._st){c._stB=wantB;c._st=want;changed=true}
+      }
+    }
+    if(!changed)break;
+  }
+  // 5. 结果回写
+  const V=n=>n<0?0:volt[n];
+  for(const c of comps){
+    const T=TYPES[c.t];
+    const a=ni(c.ax,c.ay), b=ni(c.bx,c.by);
+    const vd=V(a)-V(b);
+    c.v=vd;
+    switch(c.t){
+      case 'w':c.i=0;break; // 导线电流不单独计算
+      case 'r330':case 'r1k':case 'r10k':case 'bulb':case 'probe':c.i=vd/T.R;break;
+      case 'b5':case 'b9':c.i=(T.V-vd)/T.Ri;break;
+      case 'ac':{const v=T.V*Math.sin(2*Math.PI*T.F*simT);c.i=(v-vd)/T.Ri;break}
+      case 'sens':c.i=((c.on?T.V:0)-vd)/T.Ri;break;
+      case 'sw':c.i=vd*(c.on?20:GMIN);break;
+      case 'cap':c.i=T.C/dt*(vd-c.vc);c.vc=vd;break;
+      case 'led':case 'd':c.i=(c.burned||!c._st)?0:Math.max(0,(vd-T.Vf)/T.Ron);break;
+      case 'npn':{
+        const m=ni((c.ax+c.bx)/2,(c.ay+c.by)/2);
+        c.ib=c._stB?Math.max(0,(V(m)-V(b)-0.65)/200):0;
+        c.i=c._st?vd/20:0;
+        break;
+      }
+    }
+    // 烧毁判定
+    if((c.t==='led')&&!c.burned){
+      const over=c.i>0.03||vd<-4.5;
+      c.burnT=over?c.burnT+dt:0;
+      if(vd<-4.5)c.burnT+=dt*4;
+      if(c.burnT>0.12){c.burned=true;showMsg('💥 LED 烧毁了！电流过大或反向电压过高，点“重置本关”重来')}
+    }
+    // 电池短路提示
+    if((c.t==='b5'||c.t==='b9')&&Math.abs(c.i)>2&&!c._short){c._short=true;showMsg('⚠️ 短路！电池电流过大')}
+    if((c.t==='b5'||c.t==='b9')&&Math.abs(c.i)<2)c._short=false;
+  }
+}
+function gauss(A,Z,n){
+  const x=new Float64Array(n);
+  for(let col=0;col<n;col++){
+    let p=col;
+    for(let r=col+1;r<n;r++)if(Math.abs(A[r][col])>Math.abs(A[p][col]))p=r;
+    if(Math.abs(A[p][col])<1e-14){A[col][col]=1e-12;continue}
+    if(p!==col){const t=A[p];A[p]=A[col];A[col]=t;const z=Z[p];Z[p]=Z[col];Z[col]=z}
+    for(let r=col+1;r<n;r++){
+      const f=A[r][col]/A[col][col];if(f===0)continue;
+      for(let c2=col;c2<n;c2++)A[r][c2]-=f*A[col][c2];
+      Z[r]-=f*Z[col];
+    }
+  }
+  for(let r=n-1;r>=0;r--){
+    let s=Z[r];
+    for(let c2=r+1;c2<n;c2++)s-=A[r][c2]*x[c2];
+    x[r]=s/A[r][r];
+  }
+  return x;
+}
+//__SIM_END__
+// ============ 渲染 ============
+function voltColor(v){
+  const t=Math.max(-1,Math.min(1,v/9));
+  const hue=t>=0?200-t*200:200+(-t)*40;
+  return `hsl(${hue},70%,${45+Math.abs(t)*15}%)`;
+}
+function draw(){
+  const W=OX*2+(COLS-1)*S, H=OY*2+(ROWS-1)*S;
+  if(cv.width!==W){cv.width=W;cv.height=H}
+  ctx.clearRect(0,0,W,H);
+  ctx.fillStyle='#161a24';ctx.fillRect(0,0,W,H);
+  // 网格点
+  for(let c=0;c<COLS;c++)for(let r=0;r<ROWS;r++){
+    ctx.fillStyle='#2e3850';ctx.beginPath();ctx.arc(px(c),py(r),3,0,7);ctx.fill();
+  }
+  // 元件
+  for(const c of comps) drawComp(c);
+  // 节点电压着色（有元件连接的点）
+  const seen=new Set();
+  for(const c of comps){
+    const pts=c.t==='npn'?[[c.ax,c.ay],[(c.ax+c.bx)/2,(c.ay+c.by)/2],[c.bx,c.by]]:[[c.ax,c.ay],[c.bx,c.by]];
+    for(const p of pts){
+      const k=p[0]+','+p[1];if(seen.has(k))continue;seen.add(k);
+      ctx.fillStyle='#dde3ee';ctx.beginPath();ctx.arc(px(p[0]),py(p[1]),4,0,7);ctx.fill();
+    }
+  }
+  // 拖放预览
+  if(dragFrom){
+    ctx.strokeStyle='#ffd16688';ctx.lineWidth=3;ctx.setLineDash([6,5]);
+    ctx.beginPath();ctx.moveTo(px(dragFrom[0]),py(dragFrom[1]));ctx.lineTo(mouseXY[0],mouseXY[1]);ctx.stroke();
+    ctx.setLineDash([]);
+  }
+}
+function drawComp(c){
+  const T=TYPES[c.t];
+  const x1=px(c.ax),y1=py(c.ay),x2=px(c.bx),y2=py(c.by);
+  const mx=(x1+x2)/2,my=(y1+y2)/2;
+  const ang=Math.atan2(y2-y1,x2-x1), L=Math.hypot(x2-x1,y2-y1);
+  ctx.save();ctx.translate(x1,y1);ctx.rotate(ang);
+  const lit=Math.min(1,Math.abs(c.i)/0.02);
+  const wire=c.fixed?'#8fa2c8':'#aab6d0';
+  ctx.strokeStyle=wire;ctx.lineWidth=2.5;ctx.lineCap='round';
+  const gap=c.t==='w'?0:(c.t==='npn'?26:22);
+  // 引线
+  if(gap){
+    ctx.beginPath();ctx.moveTo(0,0);ctx.lineTo(L/2-gap,0);
+    ctx.moveTo(L/2+gap,0);ctx.lineTo(L,0);ctx.stroke();
+  } else {ctx.beginPath();ctx.moveTo(0,0);ctx.lineTo(L,0);ctx.stroke()}
+  ctx.translate(L/2,0);
+  ctx.font='11px sans-serif';ctx.textAlign='center';
+  const label=(s,col)=>{ctx.save();ctx.rotate(-ang);ctx.fillStyle=col||'#7c8db0';ctx.fillText(s,0,ang===0?-26:(-30));ctx.restore()};
+  switch(c.t){
+    case 'b5':case 'b9':{
+      ctx.strokeStyle='#ffd166';ctx.lineWidth=3;
+      ctx.beginPath();ctx.moveTo(-6,-14);ctx.lineTo(-6,14);ctx.stroke(); // 长线=正极(a)
+      ctx.lineWidth=6;ctx.beginPath();ctx.moveTo(5,-7);ctx.lineTo(5,7);ctx.stroke();
+      ctx.strokeStyle=wire;ctx.lineWidth=2.5;
+      ctx.beginPath();ctx.moveTo(-gap,0);ctx.lineTo(-6,0);ctx.moveTo(5,0);ctx.lineTo(gap,0);ctx.stroke();
+      ctx.save();ctx.rotate(-ang);ctx.fillStyle='#ffd166';ctx.fillText('+',(ang===0?-14:14),(ang===0?-18:-14));ctx.restore();
+      label(T.n,'#ffd166');break;
+    }
+    case 'sens':{
+      ctx.fillStyle=c.on?'#4ade80':'#33415e';
+      ctx.beginPath();ctx.roundRect(-20,-13,40,26,6);ctx.fill();
+      ctx.save();ctx.rotate(-ang);ctx.fillStyle=c.on?'#12351f':'#aab6d0';ctx.fillText(c.on?'ON':'触摸',0,4);ctx.restore();
+      label('传感器(点击)','#4ade80');break;
+    }
+    case 'ac':{
+      ctx.strokeStyle='#c084fc';ctx.lineWidth=2.5;
+      ctx.beginPath();ctx.arc(0,0,14,0,7);ctx.stroke();
+      ctx.beginPath();ctx.moveTo(-8,0);ctx.quadraticCurveTo(-4,-8,0,0);ctx.quadraticCurveTo(4,8,8,0);ctx.stroke();
+      ctx.strokeStyle=wire;ctx.beginPath();ctx.moveTo(-gap,0);ctx.lineTo(-14,0);ctx.moveTo(14,0);ctx.lineTo(gap,0);ctx.stroke();
+      label('AC','#c084fc');break;
+    }
+    case 'r330':case 'r1k':case 'r10k':{
+      ctx.strokeStyle='#8fd3f4';ctx.lineWidth=2.5;
+      ctx.strokeRect(-16,-7,32,14);
+      ctx.strokeStyle=wire;ctx.beginPath();ctx.moveTo(-gap,0);ctx.lineTo(-16,0);ctx.moveTo(16,0);ctx.lineTo(gap,0);ctx.stroke();
+      label(T.n.split(' ')[1],'#8fd3f4');break;
+    }
+    case 'probe':{
+      ctx.strokeStyle='#4ade80';ctx.lineWidth=2.5;
+      ctx.beginPath();ctx.arc(0,0,14,0,7);ctx.stroke();
+      ctx.save();ctx.rotate(-ang);ctx.fillStyle='#4ade80';ctx.fillText('V',0,4);
+      ctx.fillText(fmtV(c.v),0,ang===0?-24:-24);ctx.restore();
+      ctx.strokeStyle=wire;ctx.beginPath();ctx.moveTo(-gap,0);ctx.lineTo(-14,0);ctx.moveTo(14,0);ctx.lineTo(gap,0);ctx.stroke();
+      break;
+    }
+    case 'bulb':{
+      const g=Math.min(1,Math.abs(c.i)/0.04);
+      if(g>0.2){ctx.fillStyle=`rgba(255,220,120,${g*0.5})`;ctx.beginPath();ctx.arc(0,0,14+g*14,0,7);ctx.fill()}
+      ctx.fillStyle=g>0.2?`rgba(255,225,150,${0.3+g*0.7})`:'#232a3a';
+      ctx.beginPath();ctx.arc(0,0,13,0,7);ctx.fill();
+      ctx.strokeStyle='#dde3ee';ctx.lineWidth=2;ctx.beginPath();ctx.arc(0,0,13,0,7);ctx.stroke();
+      ctx.beginPath();ctx.moveTo(-9,-9);ctx.lineTo(9,9);ctx.moveTo(9,-9);ctx.lineTo(-9,9);ctx.stroke();
+      ctx.strokeStyle=wire;ctx.beginPath();ctx.moveTo(-gap,0);ctx.lineTo(-13,0);ctx.moveTo(13,0);ctx.lineTo(gap,0);ctx.stroke();
+      break;
+    }
+    case 'led':{
+      const g=c.burned?0:Math.min(1,Math.abs(c.i)/0.015);
+      if(g>0.15){ctx.fillStyle=`rgba(255,80,80,${g*0.55})`;ctx.beginPath();ctx.arc(0,0,12+g*16,0,7);ctx.fill()}
+      ctx.fillStyle=c.burned?'#444':(g>0.15?`rgb(255,${120-g*60},80)`:'#5b2333');
+      ctx.beginPath();ctx.moveTo(-8,-9);ctx.lineTo(-8,9);ctx.lineTo(8,0);ctx.closePath();ctx.fill();
+      ctx.strokeStyle=c.burned?'#666':'#ff8080';ctx.lineWidth=2.5;
+      ctx.beginPath();ctx.moveTo(8,-9);ctx.lineTo(8,9);ctx.stroke();
+      ctx.strokeStyle=wire;ctx.beginPath();ctx.moveTo(-gap,0);ctx.lineTo(-8,0);ctx.moveTo(8,0);ctx.lineTo(gap,0);ctx.stroke();
+      if(c.burned){ctx.save();ctx.rotate(-ang);ctx.fillStyle='#ef4444';ctx.font='14px sans-serif';ctx.fillText('💥',0,-16);ctx.restore()}
+      break;
+    }
+    case 'd':{
+      ctx.fillStyle='#8fa2c8';
+      ctx.beginPath();ctx.moveTo(-8,-8);ctx.lineTo(-8,8);ctx.lineTo(7,0);ctx.closePath();ctx.fill();
+      ctx.strokeStyle='#dde3ee';ctx.lineWidth=2.5;ctx.beginPath();ctx.moveTo(7,-8);ctx.lineTo(7,8);ctx.stroke();
+      ctx.strokeStyle=wire;ctx.beginPath();ctx.moveTo(-gap,0);ctx.lineTo(-8,0);ctx.moveTo(7,0);ctx.lineTo(gap,0);ctx.stroke();
+      label('二极管');break;
+    }
+    case 'cap':{
+      ctx.strokeStyle='#8fd3f4';ctx.lineWidth=3;
+      ctx.beginPath();ctx.moveTo(-4,-12);ctx.lineTo(-4,12);ctx.moveTo(4,-12);ctx.lineTo(4,12);ctx.stroke();
+      ctx.strokeStyle=wire;ctx.lineWidth=2.5;ctx.beginPath();ctx.moveTo(-gap,0);ctx.lineTo(-4,0);ctx.moveTo(4,0);ctx.lineTo(gap,0);ctx.stroke();
+      label(fmtV(c.v),'#8fd3f4');break;
+    }
+    case 'sw':{
+      ctx.strokeStyle=wire;ctx.beginPath();ctx.moveTo(-gap,0);ctx.lineTo(-12,0);ctx.moveTo(12,0);ctx.lineTo(gap,0);ctx.stroke();
+      ctx.fillStyle='#ffd166';
+      ctx.beginPath();ctx.arc(-12,0,3.5,0,7);ctx.fill();ctx.beginPath();ctx.arc(12,0,3.5,0,7);ctx.fill();
+      ctx.strokeStyle='#ffd166';ctx.lineWidth=3;
+      ctx.beginPath();ctx.moveTo(-12,0);
+      if(c.on)ctx.lineTo(12,0);else ctx.lineTo(8,-13);
+      ctx.stroke();
+      label(c.on?'闭合(点击)':'断开(点击)','#ffd166');break;
+    }
+    case 'npn':{
+      ctx.strokeStyle='#f0abfc';ctx.lineWidth=2.5;
+      ctx.beginPath();ctx.arc(0,0,20,0,7);ctx.stroke();
+      // 基极竖线 + C/E 斜线；基极在中点（画在圆上方連到中点网格点）
+      ctx.beginPath();ctx.moveTo(-8,-10);ctx.lineTo(-8,10);ctx.stroke();
+      ctx.beginPath();ctx.moveTo(-8,-4);ctx.lineTo(-gap,0);ctx.moveTo(-8,4);ctx.lineTo(gap,0);ctx.stroke();
+      // 从中点网格点垂直引到基极
+      ctx.strokeStyle=wire;ctx.beginPath();ctx.moveTo(0,0);ctx.moveTo(-8,0);ctx.lineTo(-8,0);ctx.stroke();
+      break;
+    }
+  }
+  ctx.restore();
+  // npn 端子标注（屏幕坐标，避免旋转方向导致错位/溢出）
+  if(c.t==='npn'){
+    ctx.fillStyle='#f0abfc';ctx.font='11px sans-serif';ctx.textAlign='center';
+    const nx=(c.ay!==c.by)?18:0, ny=(c.ax!==c.bx)?18:0; // 垂直元件→右侧标注，水平→下方
+    ctx.fillText('C',x1+nx,y1+ny+4);
+    ctx.fillText('E',x2+nx,y2+ny+4);
+    ctx.fillText('B',mx+nx,my+ny+4);
+  }
+  // 电流流动粒子
+  if(c.t!=='npn'&&Math.abs(c.i)>3e-4&&!c.burned){
+    const n=Math.max(2,Math.round(L/34));
+    const sp=Math.min(3,Math.abs(c.i)*80+0.3)*(c.i>0?1:-1);
+    ctx.fillStyle='#ffe28a';
+    for(let k=0;k<n;k++){
+      let t=((k/n)+phase*sp)%1;if(t<0)t+=1;
+      const X=x1+(x2-x1)*t, Y=y1+(y2-y1)*t;
+      ctx.beginPath();ctx.arc(X,Y,2.6,0,7);ctx.fill();
+    }
+  }
+  if(c.t==='npn'&&Math.abs(c.i)>3e-4){
+    ctx.fillStyle='#ffe28a';
+    const n=4;const sp=Math.min(3,Math.abs(c.i)*80+0.3)*(c.i>0?1:-1);
+    for(let k=0;k<n;k++){
+      let t=((k/n)+phase*sp)%1;if(t<0)t+=1;
+      const X=x1+(x2-x1)*t,Y=y1+(y2-y1)*t;
+      ctx.beginPath();ctx.arc(X,Y,2.6,0,7);ctx.fill();
+    }
+  }
+}
+// 元件小图标（面板用）
+function drawIcon(canvas,t){
+  const c=canvas.getContext('2d');canvas.width=68;canvas.height=44;
+  c.translate(34,22);c.strokeStyle='#aab6d0';c.lineWidth=2;c.font='10px sans-serif';c.textAlign='center';
+  const T=TYPES[t];
+  switch(t){
+    case 'w':c.beginPath();c.moveTo(-26,0);c.lineTo(26,0);c.stroke();break;
+    case 'b5':case 'b9':
+      c.beginPath();c.moveTo(-26,0);c.lineTo(-6,0);c.moveTo(6,0);c.lineTo(26,0);c.stroke();
+      c.strokeStyle='#ffd166';c.lineWidth=2.5;c.beginPath();c.moveTo(-5,-11);c.lineTo(-5,11);c.stroke();
+      c.lineWidth=5;c.beginPath();c.moveTo(5,-6);c.lineTo(5,6);c.stroke();break;
+    case 'r330':case 'r1k':case 'r10k':
+      c.beginPath();c.moveTo(-26,0);c.lineTo(-14,0);c.moveTo(14,0);c.lineTo(26,0);c.stroke();
+      c.strokeStyle='#8fd3f4';c.strokeRect(-14,-6,28,12);break;
+    case 'bulb':
+      c.beginPath();c.moveTo(-26,0);c.lineTo(-10,0);c.moveTo(10,0);c.lineTo(26,0);c.stroke();
+      c.beginPath();c.arc(0,0,10,0,7);c.stroke();
+      c.beginPath();c.moveTo(-7,-7);c.lineTo(7,7);c.moveTo(7,-7);c.lineTo(-7,7);c.stroke();break;
+    case 'led':
+      c.beginPath();c.moveTo(-26,0);c.lineTo(-7,0);c.moveTo(7,0);c.lineTo(26,0);c.stroke();
+      c.fillStyle='#ff8080';c.beginPath();c.moveTo(-7,-8);c.lineTo(-7,8);c.lineTo(7,0);c.closePath();c.fill();
+      c.strokeStyle='#ff8080';c.beginPath();c.moveTo(7,-8);c.lineTo(7,8);c.stroke();break;
+    case 'cap':
+      c.beginPath();c.moveTo(-26,0);c.lineTo(-4,0);c.moveTo(4,0);c.lineTo(26,0);c.stroke();
+      c.strokeStyle='#8fd3f4';c.lineWidth=3;c.beginPath();c.moveTo(-4,-10);c.lineTo(-4,10);c.moveTo(4,-10);c.lineTo(4,10);c.stroke();break;
+    case 'sw':
+      c.beginPath();c.moveTo(-26,0);c.lineTo(-10,0);c.moveTo(10,0);c.lineTo(26,0);c.stroke();
+      c.strokeStyle='#ffd166';c.beginPath();c.moveTo(-10,0);c.lineTo(7,-10);c.stroke();break;
+    case 'd':
+      c.beginPath();c.moveTo(-26,0);c.lineTo(-7,0);c.moveTo(7,0);c.lineTo(26,0);c.stroke();
+      c.fillStyle='#8fa2c8';c.beginPath();c.moveTo(-7,-8);c.lineTo(-7,8);c.lineTo(7,0);c.closePath();c.fill();
+      c.beginPath();c.moveTo(7,-8);c.lineTo(7,8);c.stroke();break;
+    case 'npn':
+      c.strokeStyle='#f0abfc';c.beginPath();c.arc(0,0,13,0,7);c.stroke();
+      c.beginPath();c.moveTo(-5,-8);c.lineTo(-5,8);c.stroke();
+      c.beginPath();c.moveTo(-5,-3);c.lineTo(-22,-10);c.moveTo(-5,3);c.lineTo(10,10);c.stroke();break;
+    case 'ac':
+      c.strokeStyle='#c084fc';c.beginPath();c.arc(0,0,11,0,7);c.stroke();
+      c.beginPath();c.moveTo(-6,0);c.quadraticCurveTo(-3,-7,0,0);c.quadraticCurveTo(3,7,6,0);c.stroke();break;
+    case 'probe':
+      c.strokeStyle='#4ade80';c.beginPath();c.arc(0,0,11,0,7);c.stroke();
+      c.fillStyle='#4ade80';c.fillText('V',0,4);break;
+  }
+}
+//__RENDER_END__
+// ============ 关卡定义 ============
+// pre: [t,ax,ay,bx,by,on?]  fixed 元件
+const F=(t,ax,ay,bx,by,on)=>({t,ax,ay,bx,by,fixed:true,on:!!on,burned:false,i:0,v:0,vc:0,burnT:0});
+const byT=t=>comps.filter(c=>c.t===t);
+const LEVELS=[
+{name:'1. 初次点亮', desc:'欢迎来到电路世界！左边是一节 5V 电池（长线是正极 +）。用导线把灯泡接进电路，形成一个闭合回路。',
+ hint:'选中“灯泡”放在电路中间，再用导线把电池正极→灯泡→电池负极连成一圈。电流只有在闭合回路里才会流动。',
+ know:'电流需要闭合回路才能流动：从电源正极出发，经过用电器，回到负极。灯泡本质是一个电阻，电流通过时发光。',
+ palette:{bulb:1}, pre:[F('b5',1,2,1,4)],
+ goals:[{text:'让灯泡亮起来（电流 ≥ 30mA）',check:()=>byT('bulb').some(c=>Math.abs(c.i)>=0.03)}]},
+
+{name:'2. 拯救 LED', desc:'LED 很娇气：电流超过 30mA 就会烧毁！这里是 9V 电池，直接接上 LED 一定会冒烟。想办法保护它。',
+ hint:'串联一个电阻来限流。I = (9V − 2V) ÷ R。330Ω 约给 20mA，刚刚好；1kΩ 约 7mA，也可以。注意 LED 有方向（三角形指向负极）。',
+ know:'欧姆定律 I=U/R。LED 有约 2V 的导通压降，剩余电压由串联电阻承担，从而限制电流。这是最常用的保护电路。',
+ palette:{led:1,r330:1,r1k:1}, pre:[F('b9',1,2,1,4)],
+ goals:[{text:'LED 点亮且电流在 5~25mA 之间',check:()=>byT('led').some(c=>c.i>=0.005&&c.i<=0.025&&!c.burned)},
+        {text:'LED 没有烧毁',check:()=>byT('led').length>0&&byT('led').every(c=>!c.burned)}]},
+
+{name:'3. 分压器', desc:'右边的电压表需要读到 3V（±0.3V）。可是电池是 9V 的——用电阻把电压“分”出来。',
+ hint:'两个电阻串联，中间点的电压 = 9V × R下/(R上+R下)。要得到 3V：上面 2kΩ（两个1k串联）、下面 1kΩ。把电压表接在下面那个电阻两端。',
+ know:'分压公式 Vout = Vin × R2/(R1+R2)。串联电路中电压按电阻比例分配，这是传感器读数、音量旋钮的原理。',
+ palette:{r1k:3}, pre:[F('b9',1,2,1,4),F('probe',9,2,9,4)],
+ goals:[{text:'电压表读数 3V ± 0.3V（保持1秒）',check:dt=>{
+   const ok=byT('probe').some(c=>Math.abs(c.v)>=2.7&&Math.abs(c.v)<=3.3);
+   latch.t3=ok?(latch.t3||0)+dt:0;return latch.t3>=1;}}]},
+
+{name:'4. 并联的力量', desc:'两个灯泡都要亮到全亮（各 ≥30mA）。试试串联会怎样？再试试并联。',
+ hint:'串联时电阻相加，每个灯泡只分到一半电压，电流只有 25mA，不够亮。并联时每个灯泡都直接享受 5V，各得约 50mA。',
+ know:'串联：电流处处相等，电压分配。并联：电压处处相等，电流分配。家里的电器都是并联的，所以互不影响。',
+ palette:{bulb:2}, pre:[F('b5',1,2,1,4)],
+ goals:[{text:'两个灯泡都放入电路',check:()=>byT('bulb').length>=2},
+        {text:'每个灯泡电流都 ≥ 30mA',check:()=>byT('bulb').length>=2&&byT('bulb').every(c=>Math.abs(c.i)>=0.03)}]},
+
+{name:'5. 开关控制', desc:'搭一个由开关控制的 LED 灯：闭合亮、断开灭。搭好后点击开关切换，向我证明它真的受控！',
+ hint:'电池→开关→330Ω电阻→LED→回电池，全部串联。放好后点击开关本体来切换通断。',
+ know:'开关断开时回路被切断，电流无法流动。串联在回路中任意位置的开关都能控制整条回路。',
+ palette:{led:1,r330:1,sw:1}, pre:[F('b5',1,2,1,4)],
+ goals:[{text:'闭合开关时 LED 亮（5~25mA）',check:()=>{
+   if(byT('sw').some(c=>c.on)&&byT('led').some(c=>c.i>=0.005&&c.i<=0.025))latch.on5=editVersion;
+   return latch.on5===editVersion;}},
+  {text:'断开开关时 LED 灭（<0.5mA）',check:()=>{
+   if(byT('sw').length>0&&byT('sw').every(c=>!c.on)&&byT('led').length>0&&byT('led').every(c=>c.i<5e-4))latch.off5=editVersion;
+   return latch.off5===editVersion;}}]},
+
+{name:'6. 电容延时灯', desc:'电容像一个小水库，能储存电荷。目标：断开开关后，LED 依然能继续亮至少 0.5 秒再慢慢熄灭。',
+ hint:'开关后面接一个节点X：电容从 X 接到电池负极（并联储能），LED+330Ω 也从 X 接到负极。闭合充电，断开后电容给 LED 放电。',
+ know:'电容存储电荷 Q=CV，断电后释放。放电快慢由时间常数 τ=RC 决定，这是滤波、延时电路的基础。',
+ palette:{led:1,r330:1,cap:1,sw:1}, pre:[F('b5',1,2,1,4)],
+ goals:[{text:'闭合开关，LED 点亮',check:()=>{
+   if(byT('sw').some(c=>c.on)&&byT('led').some(c=>c.i>=0.002&&!c.burned))latch.lit6=editVersion;
+   return latch.lit6===editVersion;}},
+  {text:'断开开关后 LED 持续亮 ≥0.5 秒',check:dt=>{
+   const swOpen=byT('sw').length>0&&byT('sw').every(c=>!c.on);
+   const ledOn=byT('led').some(c=>c.i>=0.002);
+   if(latch.lit6===editVersion&&swOpen&&ledOn)latch.t6=(latch.t6||0)+dt;
+   else if(!swOpen)latch.t6=0;
+   if((latch.t6||0)>=0.5)latch.ok6=editVersion;
+   return latch.ok6===editVersion;}}]},
+
+{name:'7. 单向阀门', desc:'这是交流电源：电压每秒来回翻转！LED 反向电压超过 4.5V 就会击穿烧毁。用二极管保护它，让 LED 在正半周安心闪烁。',
+ hint:'LED 直接接交流会在负半周承受 -5V 而烧毁。串联一个二极管：负半周时二极管截止，反压由两者分担，LED 就安全了。别忘了还要串联 330Ω 限流。',
+ know:'二极管只允许电流单向通过，是整流电路的核心。手机充电器把交流变直流，第一步就靠它。',
+ palette:{led:1,d:1,r330:1,cap:1}, pre:[F('ac',1,2,1,4)],
+ goals:[{text:'LED 周期性点亮（累计亮 1.5 秒）',check:dt=>{
+   if(byT('led').some(c=>c.i>=0.002&&!c.burned))latch.t7=(latch.t7||0)+dt;
+   if((latch.t7||0)>=1.5)latch.ok7=editVersion;
+   return latch.ok7===editVersion;}},
+  {text:'坚持 4 秒不烧毁',check:dt=>{
+   if(byT('led').some(c=>!c.burned&&Math.abs(c.i)>1e-4)||latch.t7>0)latch.t7b=(latch.t7b||0)+dt;
+   const alive=byT('led').length>0&&byT('led').every(c=>!c.burned);
+   if(!alive){latch.t7b=0;latch.t7=0}
+   return alive&&(latch.t7b||0)>=4;}}]},
+
+{name:'8. 微弱信号的放大', desc:'绿色的触摸传感器只能输出微弱电流（内阻 100kΩ），直接驱动灯泡根本不够。用三极管：小电流控制大电流！点击传感器模拟触摸。',
+ hint:'三极管拖 2 格放置：起点=集电极C，中点=基极B，终点=发射极E。电池→灯泡→C，E→电池负极；传感器→B，传感器另一端和 E 共地。触摸时微小基极电流打开 C-E 大通道。',
+ know:'三极管是电子学的心脏：基极的微小电流可以控制集电极的大电流（放大作用）。CPU 里有上百亿个它的兄弟（MOS管）。',
+ palette:{npn:1,r1k:1}, pre:[F('b5',1,1,1,3),F('sens',1,5,3,5)],
+ goals:[{text:'触摸传感器时灯泡全亮（≥30mA）',check:()=>{
+   if(byT('sens').some(c=>c.on)&&byT('bulb').some(c=>Math.abs(c.i)>=0.03))latch.on8=editVersion;
+   return latch.on8===editVersion;}},
+  {text:'松开传感器时灯泡熄灭（<1mA）',check:()=>{
+   if(byT('sens').every(c=>!c.on)&&byT('bulb').length>0&&byT('bulb').every(c=>Math.abs(c.i)<0.001))latch.off8=editVersion;
+   return latch.off8===editVersion;}},
+  {text:'放置灯泡',check:()=>byT('bulb').length>0}],
+ palette:{npn:1,r1k:1,bulb:1}},
+
+{name:'9. 与门', desc:'进阶篇开始！用两个开关搭一个"与门"：只有两个开关【都闭合】LED 才亮，其余任何组合都必须灭。搭好后依次演示全部 4 种开关组合。',
+ hint:'把两个开关【串联】在 LED 回路里：电流必须同时通过两个开关。别忘了 330Ω 限流电阻。',
+ know:'串联开关 = 逻辑与(AND)，并联开关 = 逻辑或(OR)。数字电路的与门/或门本质就是开关的串并联，CPU 由亿万个这样的结构组成。',
+ palette:{led:1,r330:1,sw:2}, pre:[F('b5',1,2,1,4)],
+ goals:[{text:'两个开关都闭合 → LED 亮',check:()=>{const s=byT('sw');
+   if(s.length===2&&s[0].on&&s[1].on&&byT('led').some(c=>c.i>=0.005&&c.i<=0.025))latch.aa=1;return !!latch.aa}},
+  {text:'仅开关1闭合 → LED 灭',check:()=>{const s=byT('sw'),off=byT('led').length>0&&byT('led').every(c=>c.i<5e-4);
+   if(s.length===2&&s[0].on&&!s[1].on&&off)latch.ab=1;return !!latch.ab}},
+  {text:'仅开关2闭合 → LED 灭',check:()=>{const s=byT('sw'),off=byT('led').length>0&&byT('led').every(c=>c.i<5e-4);
+   if(s.length===2&&!s[0].on&&s[1].on&&off)latch.ac=1;return !!latch.ac}},
+  {text:'都断开 → LED 灭',check:()=>{const s=byT('sw'),off=byT('led').length>0&&byT('led').every(c=>c.i<5e-4);
+   if(s.length===2&&!s[0].on&&!s[1].on&&off)latch.ad=1;return !!latch.ad}}]},
+
+{name:'10. 精确限流', desc:'工程师的日常：LED 工作电流必须精确控制在 9.5~11mA。可是库存里没有正好的电阻——用串联/并联组合出你需要的阻值！',
+ hint:'需要的总电阻 ≈ (9V−2V)÷10mA = 700Ω。电阻串联相加：330+330=660Ω → 约10.3mA ✓。并联则是 1/R=1/R1+1/R2，会更小。',
+ know:'串联 R=R1+R2，并联 R=R1R2/(R1+R2)。实际工程中常用标准阻值组合出任意精度的电阻。',
+ palette:{led:1,r330:2,r1k:2}, pre:[F('b9',1,2,1,4)],
+ goals:[{text:'LED 电流稳定在 9.5~11mA（保持1秒）',check:dt=>{
+   const ok=byT('led').some(c=>c.i>=0.0095&&c.i<=0.011&&!c.burned);
+   latch.t10=ok?(latch.t10||0)+dt:0;if(latch.t10>=1)latch.ok10=1;return !!latch.ok10}},
+  {text:'LED 没有烧毁',check:()=>byT('led').length>0&&byT('led').every(c=>!c.burned)}]},
+
+{name:'11. 惠斯通电桥', desc:'经典名题！中间的电压表横跨在"桥"上。用 4 个电阻搭两条分压支路，让电桥【平衡】——电压表读数为 0（±0.15V），但电路里必须有电流在流动。',
+ hint:'左右各搭一条从正极到负极的分压支路（如 1k 在上、330 在下），电压表两端分别接两条支路的中点。两边比例相同 → 中点电位相等 → 读数为 0。',
+ know:'电桥平衡条件：R1/R2 = R3/R4。惠斯通电桥能精密测量微小电阻变化，是电子秤、应变传感器的核心原理。',
+ palette:{r330:2,r1k:2}, pre:[F('b5',1,2,1,4),F('probe',4,3,6,3)],
+ goals:[{text:'4 个电阻都接入且有电流（各 ≥1mA）',check:()=>{
+   const rs=comps.filter(c=>c.t==='r330'||c.t==='r1k');
+   return rs.length>=4&&rs.every(c=>Math.abs(c.i)>=0.001)}},
+  {text:'电桥平衡：|读数| ≤ 0.15V 且电池电流 ≥3mA（保持1秒）',check:dt=>{
+   const p=byT('probe')[0],b=byT('b5')[0];
+   const ok=p&&b&&Math.abs(p.v)<=0.15&&Math.abs(b.i)>=0.003&&comps.filter(c=>c.t==='r330'||c.t==='r1k').length>=4;
+   latch.t11=ok?(latch.t11||0)+dt:0;if(latch.t11>=1)latch.ok11=1;return !!latch.ok11}}]},
+
+{name:'12. 双向车道', desc:'交流电的方向每秒来回变。让两个 LED 反向并联："红灯"在正半周亮、另一个在负半周亮，交替闪烁。互相保护，谁都不许烧毁！',
+ hint:'两个 LED 方向相反地并联在一起（一个 a→b，另一个 b→a），再串联 330Ω 限流。导通的那个会把反向电压钳位在 2V 左右，保护另一个。',
+ know:'反向并联的二极管互为保护钳位。LED 指示灯、双色灯就用这个技巧判断电流方向。',
+ palette:{led:2,r330:2}, pre:[F('ac',1,2,1,4)],
+ goals:[{text:'两个 LED 轮流点亮（各累计 ≥1秒）',check:dt=>{
+   const l=byT('led');if(l.length<2)return false;
+   if(l[0].i>=0.002)latch.la=(latch.la||0)+dt;
+   if(l[1].i>=0.002)latch.lb=(latch.lb||0)+dt;
+   if(l.some(c=>c.burned)){latch.la=0;latch.lb=0}
+   return (latch.la||0)>=1&&(latch.lb||0)>=1}},
+  {text:'坚持 4 秒无烧毁',check:dt=>{
+   const l=byT('led');const alive=l.length>=2&&l.every(c=>!c.burned);
+   if(alive&&((latch.la||0)>0||(latch.lb||0)>0))latch.t12=(latch.t12||0)+dt;
+   if(!alive)latch.t12=0;
+   return alive&&(latch.t12||0)>=4}}]},
+{name:'13. 整流滤波', desc:'把交流变成平稳的直流！右侧电压表（带 1kΩ 负载）要求电压【始终】不低于 2V，坚持 3 秒。光靠二极管还不够——想想怎么"填平"波谷。',
+ hint:'二极管负责只放行正半周（整流），电容并联在负载上负责储能填谷（滤波）。二极管→节点X，电容和负载都接在 X 与回线之间。',
+ know:'整流+滤波是所有电源适配器的第一步。电容在电压高时充电、低时放电，τ=RC 越大波纹越小。',
+ palette:{d:1,cap:1,r330:1}, pre:[F('ac',1,2,1,4),F('probe',9,2,9,4),F('r1k',10,2,10,4)],
+ goals:[{text:'接入二极管（有电流通过）',check:()=>{
+   if(byT('d').some(c=>Math.abs(c.i)>=0.001))latch.d13=1;return !!latch.d13}},
+  {text:'电压表始终 ≥2V（连续保持3秒）',check:dt=>{
+   const p=byT('probe')[0];
+   latch.t13=(p&&p.v>=2)?(latch.t13||0)+dt:0;
+   if(latch.t13>=3)latch.ok13=1;return !!latch.ok13}}]},
+
+{name:'14. 反相器（非门）', desc:'反着来！要求：【松开】传感器时 LED 亮，【触摸】时 LED 灭。提示：三极管导通时，会把和它并联的东西"短路"掉。',
+ hint:'5V→330Ω→节点X，LED 从 X 接到地；三极管 C-E 也从 X 接到地（与 LED 并联）；传感器接基极。触摸时三极管导通，把 X 拉到 0.3V，LED 就灭了。',
+ know:'这就是逻辑非门(NOT)：输出与输入相反。反相器是数字电路最基本的单元，两个非门首尾相连就是存储器的雏形。',
+ palette:{npn:1,r330:1,r1k:1,led:1}, pre:[F('b5',1,1,1,3),F('sens',1,5,3,5)],
+ goals:[{text:'松开传感器 → LED 亮（5~25mA）',check:()=>{
+   if(byT('sens').every(c=>!c.on)&&byT('led').some(c=>c.i>=0.005&&c.i<=0.025)&&byT('npn').length>0)latch.a14=1;return !!latch.a14}},
+  {text:'触摸传感器 → LED 灭（<0.5mA）',check:()=>{
+   if(byT('sens').some(c=>c.on)&&byT('led').length>0&&byT('led').every(c=>c.i<5e-4))latch.b14=1;return !!latch.b14}}]},
+
+{name:'15. 延时点灯', desc:'终极时序挑战：闭合开关后，LED 不能立刻亮——必须先"沉默"至少 1.5 秒，然后自动点亮！用 RC 充电的时间差来实现。',
+ hint:'开关→10kΩ→基极，电容从基极接地：电容慢慢充电，约 3 秒后基极电压才够 0.65V，三极管才导通。LED+330Ω 接在集电极回路（5V→330→LED→C，E→地）。',
+ know:'RC 充电到阈值需要的时间 t≈RC·ln(V/(V−Vth))。楼道延时灯、相机自拍倒计时都是这个原理。',
+ palette:{npn:1,r10k:1,r330:1,cap:1,led:1,sw:1}, pre:[F('b5',1,2,1,4)],
+ goals:[{text:'闭合开关后 LED 保持熄灭 ≥1.5 秒',check:dt=>{
+   const closed=byT('sw').some(c=>c.on);
+   if(closed&&!latch.was15){latch.tc15=0;latch.lit15=null}
+   if(closed)latch.tc15=(latch.tc15||0)+dt;
+   if(closed&&latch.lit15==null&&byT('led').some(c=>c.i>=0.002))latch.lit15=latch.tc15;
+   latch.was15=closed;
+   if(latch.lit15!=null&&latch.lit15>=1.5)latch.ok15a=1;
+   return !!latch.ok15a}},
+  {text:'随后 LED 自动点亮（2~25mA）',check:()=>{
+   if(latch.ok15a&&byT('sw').some(c=>c.on)&&byT('led').some(c=>c.i>=0.002&&c.i<=0.025))latch.ok15b=1;
+   return !!latch.ok15b}}]},
+
+{name:'16. 全波整流桥', desc:'大师之作：用 4 个二极管搭一座"桥"，让交流的正负两个半周【都】被利用——4 个二极管全部轮流导通，且电压表（1kΩ 负载）始终 ≥2V。',
+ hint:'整流桥：交流两端接桥的左右角，负载接上下角。正半周走对角线的两个二极管，负半周走另外两个。最后并上电容滤波。画在纸上再连线！',
+ know:'全波整流利用率是半波的两倍，波纹频率也翻倍、更易滤平。你手机充电器里就有一个这样的桥（或它的效率优化版）。',
+ palette:{d:4,cap:1,r330:2}, pre:[F('ac',1,3,3,3),F('probe',9,2,9,4),F('r1k',10,2,10,4)],
+ goals:[{text:'4 个二极管都曾导通（各 ≥1mA）',check:()=>{
+   const ds=byT('d');
+   ds.forEach((c,i)=>{if(Math.abs(c.i)>=0.001)latch['d16_'+i]=1});
+   return ds.length>=4&&ds.every((c,i)=>latch['d16_'+i])}},
+  {text:'电压表始终 ≥2V（连续保持3秒）',check:dt=>{
+   const p=byT('probe')[0];
+   latch.t16=(p&&p.v>=2)?(latch.t16||0)+dt:0;
+   if(latch.t16>=3)latch.ok16=1;return !!latch.ok16}}]},
+
+{name:'★ 自由实验室', desc:'恭喜通关！这里所有元件无限供应，随意搭建你的电路。试试：全波整流？电容充放电赛跑？三极管开关串联？',
+ hint:'一些点子：① AC+4个二极管=全波整流桥 ② 两级三极管=达林顿超灵敏触摸开关 ③ 大电容+小电阻 vs 小电容+大电阻的放电比赛。',
+ know:'实验是最好的老师。烧掉几个 LED 没关系，重置就好 :)',
+ palette:{b5:9,b9:9,r330:9,r1k:9,r10k:9,bulb:9,led:9,cap:9,sw:9,d:9,npn:9,ac:9,probe:9,sens:9},
+ pre:[], goals:[{text:'自由探索，没有目标',check:()=>false}], sandbox:true},
+];
+// ============ 关卡管理 & UI ============
+function loadLevel(i){
+  level=i; const L=LEVELS[i];
+  comps=L.pre.map(p=>({...p}));
+  stock={...L.palette}; simT=0; tool='w'; resetLatch();
+  document.getElementById('lvname').textContent=L.name;
+  document.getElementById('rtitle').textContent=L.name;
+  document.getElementById('desc').textContent=L.desc;
+  document.getElementById('know').textContent=L.know;
+  const hb=document.getElementById('hintbox');hb.style.display='none';hb.textContent=L.hint;
+  document.getElementById('win').style.display='none';
+  renderPalette(); renderLvBtns(); renderGoals();
+}
+function renderLvBtns(){
+  const d=document.getElementById('lvbtns');d.innerHTML='';
+  LEVELS.forEach((L,i)=>{
+    const b=document.createElement('button');
+    b.className='lvbtn'+(i===level?' cur':'')+(i<unlocked?' done':'')+(i>unlocked?' lock':'');
+    b.textContent=L.sandbox?'★':(i+1);
+    if(i<=unlocked)b.onclick=()=>loadLevel(i);
+    d.appendChild(b);
+  });
+}
+function renderPalette(){
+  const d=document.getElementById('palette');d.innerHTML='';
+  const L=LEVELS[level];
+  const items=['w',...Object.keys(L.palette)];
+  for(const t of items){
+    const div=document.createElement('div');
+    const n=t==='w'?Infinity:(stock[t]|0);
+    div.className='pitem'+(tool===t?' sel':'')+(n<=0?' out':'');
+    const ic=document.createElement('canvas');drawIcon(ic,t);div.appendChild(ic);
+    const sp=document.createElement('span');sp.textContent=TYPES[t].n;div.appendChild(sp);
+    const ct=document.createElement('span');ct.className='cnt';ct.textContent=t==='w'?'∞':('×'+n);div.appendChild(ct);
+    if(n>0)div.onclick=()=>{tool=t;renderPalette();updDelBtn()};
+    d.appendChild(div);
+  }
+  updDelBtn();
+}
+function updDelBtn(){document.getElementById('toolDel').className='pitem'+(tool==='del'?' sel':'')}
+document.getElementById('toolDel').onclick=()=>{tool='del';renderPalette()};
+document.getElementById('hintbtn').onclick=()=>{
+  const hb=document.getElementById('hintbox');hb.style.display=hb.style.display==='none'?'block':'none';
+};
+document.getElementById('resetbtn').onclick=()=>loadLevel(level);
+document.getElementById('nextbtn').onclick=()=>{
+  if(level+1<LEVELS.length)loadLevel(level+1);
+  else document.getElementById('win').style.display='none';
+};
+// 目标判定
+let goalStates=[], winT=0;
+function renderGoals(){
+  const d=document.getElementById('goals');d.innerHTML='';
+  LEVELS[level].goals.forEach((g,i)=>{
+    const div=document.createElement('div');
+    div.className='goal'+(goalStates[i]?' ok':'');
+    div.textContent=g.text;d.appendChild(div);
+  });
+}
+function checkGoals(dt){
+  const L=LEVELS[level];
+  const prev=goalStates.join(',');
+  goalStates=L.goals.map(g=>{try{return !!g.check(dt)}catch(e){return false}});
+  if(goalStates.join(',')!==prev)renderGoals();
+  if(L.sandbox)return;
+  if(goalStates.every(x=>x)){
+    winT+=dt;
+    if(winT>0.4&&!winShown){
+      winShown=true;
+      if(level>=unlocked)unlocked=level+1;
+      document.getElementById('winp').textContent='「'+L.name.replace(/^\d+\.\s*/,'')+'」完成！'+(level+2<=LEVELS.length?'':'');
+      document.getElementById('nextbtn').textContent=level+1<LEVELS.length?(LEVELS[level+1].sandbox?'进入自由实验室 ★':'下一关 →'):'完成';
+      document.getElementById('win').style.display='flex';
+      renderLvBtns();
+    }
+  } else winT=0;
+}
+// ============ 主循环 ============
+let lastT=performance.now();
+function loop(now){
+  const dt=Math.min(0.05,(now-lastT)/1000);lastT=now;
+  phase=(phase+dt*0.35)%1;
+  try{simulate()}catch(e){}
+  checkGoals(dt);
+  draw();
+  requestAnimationFrame(loop);
+}
+loadLevel(0);
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>
